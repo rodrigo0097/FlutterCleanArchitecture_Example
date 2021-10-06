@@ -46,7 +46,9 @@ group('getConcreteNumberTrivia',(){
            * a una respuesta futura (asincrona), en caso contrario se útilizaría
            * thenReturns ()
             */
-      when(() => mockRemoteDataSource.getConcreteNumberTrivia(any()))
+      when(() => mockRemoteDataSource.getConcreteNumberTrivia(tNumber))
+              .thenAnswer((_) async => tNumberTriviaModel);
+      when(() => mockLocalDataSource.cacheNumberTrivia(tNumberTriviaModel))
           .thenAnswer((_) async => NumberTriviaModel(text: 'test', number: 42));
       when(() => mockNetworkInfo.isConnected).thenAnswer((_) async => true);
       //act
@@ -63,6 +65,8 @@ group('getConcreteNumberTrivia',(){
         'should return remote data when the call to remote data source in success',
         () async {
           // arrange
+          when(() => mockLocalDataSource.cacheNumberTrivia(tNumberTriviaModel))
+              .thenAnswer((_) async => NumberTriviaModel(text: 'test', number: 42));
           when(() => mockRemoteDataSource.getConcreteNumberTrivia(tNumber))
               .thenAnswer((_) async => tNumberTriviaModel);
           //act
@@ -73,6 +77,22 @@ group('getConcreteNumberTrivia',(){
           expect(result, equals(Right(tNumberTrivia)));
         },
       );
+    test(
+      'should cache the data locally when the call to remote data source in success',
+          () async {
+        // arrange
+        when(() => mockLocalDataSource.cacheNumberTrivia(tNumberTriviaModel))
+            .thenAnswer((_) async => NumberTriviaModel(text: 'test', number: 42));
+        when(() => mockRemoteDataSource.getConcreteNumberTrivia(tNumber))
+            .thenAnswer((_) async => tNumberTriviaModel);
+        //act
+        await repository.getConcreteNumberTrivia(tNumber);
+        //assert
+        verify(() => mockRemoteDataSource.getConcreteNumberTrivia(tNumber));
+        //el equals puede ser omitido, pero lo dejo por legibilidad
+        verify(() => mockLocalDataSource.cacheNumberTrivia(tNumberTriviaModel));
+      },
+    );
     });
   group('device is offline',(){
     setUp((){
