@@ -4,6 +4,7 @@ import 'package:flutter_clean_achitecture/core/error/failure.dart';
 import 'package:flutter_clean_achitecture/core/platform/network_info.dart';
 import 'package:flutter_clean_achitecture/features/number_trivia/data/datasources/number_trivia_local_data_sources.dart';
 import 'package:flutter_clean_achitecture/features/number_trivia/data/datasources/number_trivia_remote_data_sources.dart';
+import 'package:flutter_clean_achitecture/features/number_trivia/data/models/number_trivia_model.dart';
 import 'package:flutter_clean_achitecture/features/number_trivia/domain/entities/number_trivia.dart';
 import 'package:flutter_clean_achitecture/features/number_trivia/domain/repositories/number_trivia_repository.dart';
 
@@ -16,6 +17,12 @@ class NumberTriviaRepositoryImpl implements NumberTriviaRepository{
     required this.remoteDataSource,
     required this.localDataSource,
     required this.networkInfo});
+
+  /**
+   * el presente es el código de cada una de las funciones separadas,
+   * en el método de acabo se combinan útilizando la funcionalidad de dart
+   * de funciones de alto orden
+   *
 
   @override
   Future<Either<Failure, NumberTrivia>> getConcreteNumberTrivia(int number,) async {
@@ -42,8 +49,6 @@ class NumberTriviaRepositoryImpl implements NumberTriviaRepository{
 
     }
 
-
-
   }
 
   @override
@@ -69,6 +74,48 @@ class NumberTriviaRepositoryImpl implements NumberTriviaRepository{
 
 
     }
+  }
+   */
+  @override
+  Future<Either<Failure, NumberTrivia>> getConcreteNumberTrivia(int number,) async {
+    return await _getTrivia((){
+      return remoteDataSource.getConcreteNumberTrivia(number);
+    });
+  }
+
+  @override
+  Future<Either<Failure, NumberTrivia>> getRandomNumberTrivia() async {
+    return await _getTrivia(() {
+      return remoteDataSource.getRandomNumberTrivia();
+    });
+  }
+
+  Future<Either<Failure, NumberTrivia>> _getTrivia(
+      Future<NumberTriviaModel> Function() getConcreteOrRandom
+      )async {
+
+
+    if (await networkInfo.isConnected) {
+      try {
+        final remoteTrivia = await getConcreteOrRandom();
+        //TODO este await puede joderme la compilación
+        localDataSource.cacheNumberTrivia(remoteTrivia);
+        return Right(remoteTrivia);
+      } on serverException {
+        return Left(ServerFailure());
+      }
+    } else {
+      try{
+        final cache = await localDataSource.getLastNumberTrivia();
+        return Right(cache);
+      } on cacheException {
+        return Left(CacheFailure());
+      }
+
+
+
+    }
+
   }
 
 }
